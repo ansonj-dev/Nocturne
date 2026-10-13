@@ -5,7 +5,7 @@
    and account data.
 ══════════════════════════════════════════ */
 
-const API_BASE = (window.location.protocol.startsWith('http')) ? window.location.origin : 'http://localhost:8000';
+const API_BASE = 'https://nocturne-1m7s.onrender.com';
 let currentSymbol = 'AAPLUSDT';
 let liveInterval = null;
 let timelineChart = null;
