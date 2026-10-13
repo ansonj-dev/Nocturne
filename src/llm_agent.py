@@ -31,12 +31,28 @@ class LLMAgent:
     """
 
     def __init__(self) -> None:
-        self._provider = settings.llm_provider
-        self._model = settings.llm_model
+        # Auto-detect Fireworks if FIREWORKS_API_KEY is provided
+        if settings.fireworks_api_key and settings.llm_provider in ("openai", "fireworks"):
+            self._provider = "fireworks"
+            self._model = settings.fireworks_model
+        else:
+            self._provider = settings.llm_provider
+            self._model = settings.llm_model
+
         self._client = self._build_client()
 
     def _build_client(self):
-        if self._provider == "anthropic":
+        if self._provider == "fireworks":
+            try:
+                import openai
+                return openai.AsyncOpenAI(
+                    api_key=settings.fireworks_api_key,
+                    base_url=settings.fireworks_base_url,
+                )
+            except Exception as exc:
+                logger.warning(f"[llm] Failed to initialize Fireworks client: {exc}")
+                return None
+        elif self._provider == "anthropic":
             try:
                 import anthropic
                 return anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
@@ -111,8 +127,9 @@ class LLMAgent:
             )
             return msg.content[0].text.strip()
         else:
+            default_m = "accounts/fireworks/models/qwen2p5-72b-instruct" if self._provider == "fireworks" else "gpt-4o-mini"
             msg = await self._client.chat.completions.create(
-                model=self._model or "gpt-4o-mini",
+                model=self._model or default_m,
                 max_tokens=200,
                 messages=[
                     {"role": "system", "content": _SYSTEM_PROMPT},

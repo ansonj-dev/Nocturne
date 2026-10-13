@@ -87,6 +87,20 @@ async def shutdown():
 # ---------------------------------------------------------------------------
 
 
+import os
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
+
+_dashboard_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dashboard"))
+if os.path.exists(_dashboard_path):
+    app.mount("/dashboard", StaticFiles(directory=_dashboard_path, html=True), name="dashboard")
+
+
+@app.get("/", tags=["meta"], include_in_schema=False)
+async def root():
+    return RedirectResponse(url="/dashboard/")
+
+
 @app.get("/health", tags=["meta"])
 async def health():
     return {"status": "ok", "version": settings.app_version}

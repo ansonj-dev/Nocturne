@@ -26,7 +26,19 @@ class Settings(BaseSettings):
     # --- LLM ---
     openai_api_key: str = Field(default="", description="OpenAI API key for GPT models")
     anthropic_api_key: str = Field(default="", description="Anthropic API key for Claude models")
-    llm_provider: str = Field(default="openai", description="LLM provider: openai | anthropic")
+    fireworks_api_key: str = Field(default="", description="Fireworks AI API key")
+    fireworks_model: str = Field(
+        default="accounts/fireworks/models/qwen2p5-72b-instruct",
+        description="Fireworks model name (e.g. Qwen 2.5 72B or Qwen 2.5 Max)",
+    )
+    fireworks_base_url: str = Field(
+        default="https://api.fireworks.ai/inference/v1",
+        description="Fireworks AI API base URL",
+    )
+    llm_provider: str = Field(
+        default="openai",
+        description="LLM provider: openai | anthropic | fireworks",
+    )
     llm_model: str = Field(default="gpt-4o-mini", description="Model name to use")
 
     # --- Database ---

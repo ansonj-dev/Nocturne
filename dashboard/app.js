@@ -5,7 +5,7 @@
    and account data.
 ══════════════════════════════════════════ */
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = (window.location.protocol.startsWith('http')) ? window.location.origin : 'http://localhost:8000';
 let currentSymbol = 'AAPLUSDT';
 let liveInterval = null;
 let timelineChart = null;
