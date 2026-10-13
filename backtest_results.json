@@ -1,0 +1,53 @@
+{
+  "buy_and_hold": {
+    "strategy_name": "Buy & Hold Benchmark",
+    "total_return_pct": 32.89,
+    "annualized_return_pct": 133.39,
+    "sharpe_ratio": 2.11,
+    "sortino_ratio": 2.22,
+    "max_drawdown_pct": 23.93,
+    "win_rate_pct": 100.0,
+    "trade_count": 1,
+    "winning_trades": 1,
+    "losing_trades": 0,
+    "avg_trade_pnl_usd": 3288.95,
+    "avg_slippage_bps": 3.0,
+    "turnover_x": 1.0,
+    "blocked_toxic_signals": 0,
+    "signals_received": 0
+  },
+  "signal_only": {
+    "strategy_name": "Signal-Only Agent (Ungated)",
+    "total_return_pct": -12.57,
+    "annualized_return_pct": -50.98,
+    "sharpe_ratio": -5.64,
+    "sortino_ratio": -5.63,
+    "max_drawdown_pct": 12.79,
+    "win_rate_pct": 34.13,
+    "trade_count": 378,
+    "winning_trades": 129,
+    "losing_trades": 249,
+    "avg_trade_pnl_usd": -3.33,
+    "avg_slippage_bps": 14.98,
+    "turnover_x": 17.78,
+    "blocked_toxic_signals": 0,
+    "signals_received": 378
+  },
+  "nocturne": {
+    "strategy_name": "NOCTURNE Agent (Liquidity-Gated)",
+    "total_return_pct": 1.59,
+    "annualized_return_pct": 6.43,
+    "sharpe_ratio": 3.63,
+    "sortino_ratio": 9.1,
+    "max_drawdown_pct": 0.29,
+    "win_rate_pct": 57.62,
+    "trade_count": 210,
+    "winning_trades": 121,
+    "losing_trades": 89,
+    "avg_trade_pnl_usd": 0.76,
+    "avg_slippage_bps": 2.98,
+    "turnover_x": 7.75,
+    "blocked_toxic_signals": 168,
+    "signals_received": 378
+  }
+}

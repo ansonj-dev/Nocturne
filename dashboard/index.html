@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NOCTURNE — Liquidity Weather Agent</title>
+  <meta name="description" content="NOCTURNE is an AI-powered liquidity-weather agent for 24/7 tokenized U.S. stock trading on Bitget." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ── HEADER ── -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text">NOCTURNE</span>
+        <span class="logo-sub">Liquidity Weather Agent</span>
+      </div>
+      <nav class="nav">
+        <button class="nav-btn active" id="nav-dashboard" onclick="showTab('dashboard')">Dashboard</button>
+        <button class="nav-btn" id="nav-signal"    onclick="showTab('signal')">Signal Lab</button>
+        <button class="nav-btn" id="nav-history"   onclick="showTab('history')">History</button>
+        <button class="nav-btn" id="nav-account"   onclick="showTab('account')">Account</button>
+      </nav>
+      <div class="status-pill" id="conn-status">● CONNECTING</div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ══════════════════════ DASHBOARD TAB ══════════════════════ -->
+    <section class="tab active" id="tab-dashboard">
+      <!-- Symbol bar -->
+      <div class="symbol-bar glass-panel">
+        <label class="symbol-label">Symbol</label>
+        <div class="symbol-pills" id="symbol-pills">
+          <button class="pill active" onclick="setSymbol('AAPLUSDT')">AAPL</button>
+          <button class="pill" onclick="setSymbol('TSLAUSHDT')">TSLA</button>
+          <button class="pill" onclick="setSymbol('NVDAUSDT')">NVDA</button>
+          <button class="pill" onclick="setSymbol('MSFTUSDT')">MSFT</button>
+          <button class="pill" onclick="setSymbol('AMZNUSDT')">AMZN</button>
+        </div>
+        <div class="symbol-custom">
+          <input id="custom-symbol" placeholder="Custom symbol…" />
+          <button class="btn-secondary" onclick="setCustomSymbol()">Go</button>
+        </div>
+        <button class="btn-primary" id="refresh-btn" onclick="fetchWeather()">↻ Refresh</button>
+        <label class="toggle-label">
+          <input type="checkbox" id="live-toggle" onchange="toggleLive()" />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          Live
+        </label>
+      </div>
+
+      <!-- Main weather card -->
+      <div class="weather-grid">
+        <div class="weather-main glass-panel" id="weather-main">
+          <div class="weather-loading" id="weather-loading">
+            <div class="spinner"></div>
+            <p>Evaluating liquidity conditions…</p>
+          </div>
+          <div class="weather-content hidden" id="weather-content">
+            <div class="state-badge" id="state-badge">CLEAR</div>
+            <div class="score-ring-wrap">
+              <svg class="score-ring" viewBox="0 0 120 120" id="score-ring-svg">
+                <circle class="ring-bg" cx="60" cy="60" r="50"/>
+                <circle class="ring-fill" cx="60" cy="60" r="50" id="ring-fill"/>
+              </svg>
+              <div class="score-center">
+                <span class="score-value" id="score-value">—</span>
+                <span class="score-label">/ 100</span>
+              </div>
+            </div>
+            <div class="action-block">
+              <div class="action-pill" id="action-pill">TRADE</div>
+              <div class="action-sub" id="action-sub">Full size permitted</div>
+            </div>
+            <div class="price-row">
+              <div class="price-item">
+                <span class="price-label">Bid</span>
+                <span class="price-value" id="bid-val">—</span>
+              </div>
+              <div class="price-item">
+                <span class="price-label">Mid</span>
+                <span class="price-value" id="mid-val">—</span>
+              </div>
+              <div class="price-item">
+                <span class="price-label">Ask</span>
+                <span class="price-value" id="ask-val">—</span>
+              </div>
+              <div class="price-item">
+                <span class="price-label">Spread</span>
+                <span class="price-value" id="spread-val">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Component scores -->
+        <div class="scores-panel glass-panel">
+          <h3 class="panel-title">Component Scores</h3>
+          <div class="score-bars" id="score-bars">
+            <div class="score-bar-row">
+              <span class="bar-label">Spread</span>
+              <div class="bar-track"><div class="bar-fill" id="bar-spread" style="width:0%"></div></div>
+              <span class="bar-val" id="txt-spread">—</span>
+            </div>
+            <div class="score-bar-row">
+              <span class="bar-label">Depth</span>
+              <div class="bar-track"><div class="bar-fill" id="bar-depth" style="width:0%"></div></div>
+              <span class="bar-val" id="txt-depth">—</span>
+            </div>
+            <div class="score-bar-row">
+              <span class="bar-label">Volatility</span>
+              <div class="bar-track"><div class="bar-fill" id="bar-vol" style="width:0%"></div></div>
+              <span class="bar-val" id="txt-vol">—</span>
+            </div>
+            <div class="score-bar-row">
+              <span class="bar-label">Lead-Lag</span>
+              <div class="bar-track"><div class="bar-fill" id="bar-ll" style="width:0%"></div></div>
+              <span class="bar-val" id="txt-ll">—</span>
+            </div>
+            <div class="score-bar-row">
+              <span class="bar-label">Event Risk</span>
+              <div class="bar-track"><div class="bar-fill" id="bar-ev" style="width:0%"></div></div>
+              <span class="bar-val" id="txt-ev">—</span>
+            </div>
+          </div>
+          <div class="market-stats" id="market-stats">
+            <div class="stat-item">
+              <span class="stat-label">Realized Vol (1H ann.)</span>
+              <span class="stat-value" id="stat-vol">—</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Depth (±25 bps)</span>
+              <span class="stat-value" id="stat-depth">—</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Allowed Size</span>
+              <span class="stat-value" id="stat-size">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rationale panel -->
+        <div class="rationale-panel glass-panel" id="rationale-panel">
+          <h3 class="panel-title">AI Rationale</h3>
+          <div class="rationale-text" id="rationale-text">
+            Run a weather check to see the AI explanation.
+          </div>
+          <div class="rationale-ts" id="rationale-ts"></div>
+        </div>
+
+        <!-- Weather timeline mini-chart -->
+        <div class="timeline-panel glass-panel">
+          <h3 class="panel-title">Score Timeline</h3>
+          <canvas id="timeline-chart" height="120"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════ SIGNAL LAB TAB ══════════════════════ -->
+    <section class="tab" id="tab-signal">
+      <div class="signal-layout">
+        <div class="signal-form glass-panel">
+          <h2 class="panel-title">Submit Opportunity Signal</h2>
+          <p class="form-hint">The risk engine evaluates your signal against live market conditions.</p>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Symbol</label>
+              <input id="sig-symbol" value="AAPLUSDT" />
+            </div>
+            <div class="form-group">
+              <label>Signal Type</label>
+              <select id="sig-type">
+                <option value="EARNINGS_DISLOCATION">Earnings Dislocation</option>
+                <option value="MACRO_SHOCK">Macro Shock</option>
+                <option value="CROSS_MARKET_DIVERGENCE">Cross-Market Divergence</option>
+                <option value="MEAN_REVERSION">Mean Reversion</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Direction</label>
+              <select id="sig-direction">
+                <option value="long">Long</option>
+                <option value="short">Short</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Signal Strength (0–1)</label>
+              <input id="sig-strength" type="number" min="0" max="1" step="0.1" value="0.7" />
+            </div>
+            <div class="form-group">
+              <label>Notional (USDT)</label>
+              <input id="sig-notional" type="number" value="500" />
+            </div>
+            <div class="form-group">
+              <label>Entry Price</label>
+              <input id="sig-entry" type="number" placeholder="Optional" />
+            </div>
+            <div class="form-group">
+              <label>Stop Price</label>
+              <input id="sig-stop" type="number" placeholder="Optional" />
+            </div>
+            <div class="form-group">
+              <label>Target Price</label>
+              <input id="sig-target" type="number" placeholder="Optional" />
+            </div>
+            <div class="form-group full-width">
+              <label>Notes</label>
+              <input id="sig-notes" placeholder="e.g. After-hours earnings beat…" />
+            </div>
+          </div>
+          <button class="btn-primary btn-full" id="submit-signal-btn" onclick="submitSignal()">
+            Evaluate Signal →
+          </button>
+        </div>
+
+        <div class="signal-result glass-panel hidden" id="signal-result">
+          <h2 class="panel-title">Risk Engine Decision</h2>
+          <div class="decision-badge" id="decision-badge">—</div>
+          <div class="decision-detail" id="decision-detail"></div>
+          <div class="decision-weather" id="decision-weather"></div>
+          <div class="decision-rationale" id="decision-rationale"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════ HISTORY TAB ══════════════════════ -->
+    <section class="tab" id="tab-history">
+      <div class="history-layout glass-panel">
+        <div class="history-header">
+          <h2 class="panel-title">Weather History</h2>
+          <div class="history-controls">
+            <input id="hist-symbol" placeholder="Symbol e.g. AAPLUSDT" value="AAPLUSDT" />
+            <button class="btn-secondary" onclick="fetchHistory()">Load</button>
+          </div>
+        </div>
+        <div class="history-table-wrap">
+          <table class="history-table" id="history-table">
+            <thead>
+              <tr>
+                <th>Time (UTC)</th>
+                <th>State</th>
+                <th>Score</th>
+                <th>Spread</th>
+                <th>Depth</th>
+                <th>Vol</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════ ACCOUNT TAB ══════════════════════ -->
+    <section class="tab" id="tab-account">
+      <div class="account-grid">
+        <div class="account-card glass-panel" id="account-balance-card">
+          <h2 class="panel-title">Account Balance</h2>
+          <div class="balance-loading">
+            <button class="btn-primary" onclick="fetchAccount()">Load Account Data</button>
+          </div>
+          <div class="balance-content hidden" id="balance-content"></div>
+        </div>
+        <div class="account-card glass-panel" id="positions-card">
+          <h2 class="panel-title">Open Positions</h2>
+          <div class="positions-content" id="positions-content">
+            <p class="empty-state">Load account data to see positions.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

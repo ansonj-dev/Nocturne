@@ -1,0 +1,131 @@
+Yes—this is the most important part of the application. It tells you exactly how judges will score: **thesis, user/value, and validation evidence carry the most weight**, while progress and your AI-trading view are supporting signals. The form also explicitly prevents you from substituting a GitHub README, X post, or deck for a clear written thesis. [bitget-ai.gitbook](https://bitget-ai.gitbook.io/bitgetai_hackathons2)
+
+## How to answer it
+
+### Part 1 · Thesis
+
+Use this structure:
+
+1. **The problem or market inefficiency**
+2. **Your core hypothesis**
+3. **Why it should work**
+4. **Signal sources and decision logic**
+5. **Risk controls**
+
+For a strategy/agent, write something like:
+
+> **Thesis:** Tokenized U.S. stocks continue trading 24/7, but liquidity, spreads, and information flow change sharply outside regular U.S. market hours. We hypothesize that overnight price dislocations driven by crypto-market sentiment, macro news, and after-hours liquidity create short-lived mean-reversion opportunities in high-liquidity tokenized equities.  
+>   
+> **Signal sources:** tokenized-stock order-book imbalance, spread, volume z-score, crypto-market momentum, scheduled macro events, and news/sentiment embeddings.  
+>   
+> **Decision logic:** the agent computes an overnight dislocation score; it enters only when signal strength, liquidity, and volatility thresholds are met, then exits on mean reversion, time stop, or signal invalidation.  
+>   
+> **Risk controls:** maximum position size, per-trade risk cap, daily loss limit, volatility filter, spread/liquidity gate, no-trade window around low-liquidity periods, kill switch, and human override.
+
+For a tool, replace strategy logic with:
+
+> **Pain point:** retail traders cannot quickly synthesize overnight news, tokenized-stock price action, and portfolio exposure into a defensible decision. Existing dashboards show data but do not explain trade implications or stress-test a decision.  
+>   
+> **Our solution:** a natural-language trading desk that ingests market data and user constraints, produces a structured research brief, identifies risks, and generates scenario analyses—while leaving execution to the user.
+
+**Avoid vague claims** such as “AI improves trading” or “our agent uses sentiment analysis.” State the exact signal, threshold, action, and failure condition.
+
+### Part 2 · Target user and value
+
+Name one narrow segment. A strong answer looks like:
+
+> **Target user:** active retail traders on Bitget with roughly $1,000–$20,000 in trading capital, medium-to-high risk appetite, who trade tokenized U.S. stocks 3–10 times per week and want to capture overnight/after-hours opportunities without monitoring markets continuously.  
+>   
+> **Core pain point:** they miss liquidity and volatility shifts that occur outside their active hours, and they lack a disciplined framework for deciding when an overnight move is tradable versus noise.  
+>   
+> **Existing solutions fall short because:** generic trading bots lack tokenized-stock context; chatbots provide analysis but do not enforce execution rules; manual monitoring does not scale across 24/7 sessions.
+
+For a tool, use a similarly specific user:
+
+> **Target user:** semi-professional traders managing $10,000–$100,000 who place 5–20 trades weekly and need post-trade review and pre-trade scenario analysis, not fully autonomous execution.
+
+Do **not** say “all traders,” “crypto users,” or “retail and institutions.” Pick one segment and explain why the product fits their capital, frequency, risk tolerance, and workflow.
+
+### Part 3 · Validation data
+
+This is where most submissions fail. Label every number:
+
+- **Observed:** measured in a real backtest, paper trade, or user test.
+- **Estimated:** calculated from assumptions or a limited sample.
+- **Targeted:** your goal, not evidence yet.
+
+For a strategy/agent, include a compact metrics table:
+
+| Metric | Result | Status | Test conditions |
+|---|---:|---|---|
+| Test period | Sep 1–Oct 1, 2026 | Observed | Tokenized U.S. stocks, hourly bars |
+| Total return | 4.2% | Observed | Gross of estimated fees |
+| Sharpe ratio | 1.35 | Observed | Daily returns |
+| Sortino ratio | 1.82 | Observed | Downside deviation |
+| Max drawdown | 6.8% | Observed | Peak-to-trough equity curve |
+| Win rate | 54% | Observed | 120 trades |
+| Turnover | 8.5x | Observed | Notional traded / average equity |
+| Fees, slippage, funding | 0.9% total | Estimated | Exchange fee schedule plus conservative slippage model |
+
+If you have no results yet, do not invent them. Instead, write a concrete validation plan:
+
+> **Validation plan:** We will paper-trade for 14 days across at least 50 signals, using 1x leverage and a 0.5% risk-per-trade cap. Success thresholds: positive net return after 0.1% round-trip cost, max drawdown below 10%, Sharpe above 1.0, and at least 30 completed trades. We will also compare performance against a buy-and-hold benchmark and a no-risk-control variant.
+
+For a tool, use product metrics:
+
+| Metric | Result | Status |
+|---|---:|---|
+| Test users | 12 | Observed |
+| Task completion rate | 83% | Observed |
+| Median research-brief generation time | 41 seconds | Observed |
+| Weekly retention | 58% | Observed |
+| Target activation rate | 40% of new users completing first research task | Targeted |
+| Target retention | 30% Week-4 retention | Targeted |
+
+Also explain the distribution proof:
+
+> **Activation:** a user completes onboarding and generates their first actionable research brief.  
+> **Trading volume:** users who receive an agent-generated signal place at least one trade within 24 hours.  
+> **Retention:** at least 30% of activated users return in Week 4.  
+> **Risk:** fewer than 5% of agent recommendations breach user-defined risk limits.
+
+### Part 4 · Progress
+
+Answer in four short blocks:
+
+- **Built:** “Working agent on Bitget Agent Hub; market-data ingestion; signal engine; backtest harness; risk limits; dashboard.”
+- **Not built:** “Live-money execution, multi-account support, automated model retraining, mobile interface.”
+- **Problems and fixes:** “Noisy overnight data caused false signals; we added a liquidity filter and volatility normalization. LLM hallucinations in trade rationale; we constrained the model to structured JSON outputs and separated analysis from order execution.”
+- **Next steps:** “Paper-trade for 30 days, add execution audit log, improve drawdown control, and run 20-user beta.”
+
+Name the exact stack:
+
+> Built with **Bitget Agent Hub**, **Bitget Playbook**, Bitget developer APIs, Qwen for reasoning/summarization, Python for backtesting, and PostgreSQL/SQLite for trade logs.
+
+If you used Bitget tools, say so explicitly. Judges will want to see that the project is integrated with the ecosystem rather than a generic AI trading demo.
+
+### Part 5 · Your take on AI trading
+
+Keep it short and opinionated. For example:
+
+> AI trading should not mean “let an LLM press buy.” The near-term value is in bounded autonomy: AI handles monitoring, research synthesis, anomaly detection, and execution preparation, while deterministic risk rules control position sizing, drawdown, and kill switches.  
+>   
+> Bitget’s Agent Hub is strongest when it gives agents a clear action surface and auditable trade context. The biggest gap we saw was the need for better standardized evaluation datasets and clearer simulation-to-live execution parity.  
+>   
+> We believe agentic trading will move from single-signal chatbots to multi-agent systems: a research agent proposes, a risk agent vetoes, and an execution agent implements only within pre-approved constraints.
+
+## Suggested writing formula
+
+For the strongest submission, make each of Parts 1–3 answer this question directly:
+
+> **“What specific opportunity did you find, for whom, and what evidence shows your solution captures it safely?”**
+
+A high-scoring structure:
+
+1. **One-sentence thesis:** “We believe X causes Y in tokenized U.S. stocks, so an agent that does Z can capture it within defined risk limits.”
+2. **One-sentence user:** “We serve [specific trader type] who needs [specific outcome] but currently relies on [inadequate alternative].”
+3. **One evidence paragraph:** observed backtest/user metrics, or a precise validation plan with success thresholds.
+4. **One progress paragraph:** what works, what does not, and what you will ship next.
+5. **One viewpoint paragraph:** a practical stance on safe agentic trading.
+
+The key is to make the submission read like a **small, credible trading-product memo**, not a feature list. Judges are looking for a real hypothesis, a real user, and evidence that the system works or can be tested rigorously. [bitget-ai.gitbook](https://bitget-ai.gitbook.io/bitgetai_hackathons2)

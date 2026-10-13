@@ -1,0 +1,57 @@
+I created a fresh, non-generic hackathon concept: **NOCTURNE — a Liquidity-Weather Agent for 24/7 tokenized U.S. stocks**. Instead of “AI reads news and trades,” it decides **whether the market is safe enough to trade at all**, then gates every autonomous action through liquidity, spread, depth, volatility, and event-risk checks. [finance.yahoo](https://finance.yahoo.com/markets/stocks/articles/wall-streets-9-5-over-133715902.html)
+
+## The fresh idea
+
+Tokenized U.S. stocks offer round-the-clock access, but that access is not always useful: IMF research found that over half of tokenized-equity trading occurs outside regular market hours, while tokenized shares were roughly 1.5x as volatile and much less liquid than traditional equities. It also found that once U.S. markets opened, more than 85% of overnight tokenized-stock movement was reflected in traditional shares within five minutes. [finance.yahoo](https://finance.yahoo.com/markets/stocks/articles/wall-streets-9-5-over-133715902.html)
+
+That means many “overnight opportunities” are real in price but bad in execution. NOCTURNE’s thesis is:
+
+> **The most valuable action for an autonomous tokenized-stock agent is often not to trade. It should recognize when overnight liquidity is structurally unsafe and stand down.**
+
+## How it works
+
+NOCTURNE produces a **Liquidity Weather Score** from five inputs:
+
+- **Spread:** current bid-ask spread versus its recent normal range.
+- **Depth:** available liquidity near the mid-price.
+- **Volatility:** short-horizon realized volatility versus baseline.
+- **Lead-lag:** whether tokenized-stock movement is consistent with the underlying stock or related market reference.
+- **Event risk:** earnings, macro releases, abnormal news intensity, halts, or data gaps.
+
+It then returns one of four states:
+
+| State | Agent behavior |
+|---|---|
+| `CLEAR` | Normal conditions; full strategy size allowed |
+| `CLOUDY` | Tradeable but risky; reduce size and tighten stops |
+| `STORM` | Poor liquidity or unstable pricing; no new entries |
+| `BLACKOUT` | Data gap, extreme spread, halt, or risk-limit breach; cancel pending orders and stand down |
+
+This avoids the usual “sentiment bot” template. The LLM explains the regime and rationale, while a deterministic risk engine—not the model—has final authority over whether an order may be placed.
+
+## Target user
+
+**Active Bitget retail traders with $1,000–$25,000 in capital, medium-to-high risk appetite, who trade tokenized U.S. stocks 2–10 times per week and want to participate in after-hours moves without continuously monitoring shallow overnight markets.**
+
+Their pain point is specific: they may see a valid overnight move, but they cannot easily tell whether spreads, depth, and volatility make the trade worth taking. Bitget Agent Hub supports market, account, and trading data across crypto, U.S. stocks, and other assets, along with MCP, CLI, and trading skills for prices, orders, positions, and account management. [bitget](https://www.bitget.com/activity-hub/agent-hub)
+
+## Why it fits the hackathon
+
+- It directly addresses the hackathon’s **Agentic Trading** theme: an agent that senses, reasons, and executes only within risk limits. [bitget](https://www.bitget.com/activity-hub/agent-hub)
+- It is more distinctive than a generic news-sentiment or momentum bot.
+- It has a measurable edge: compare a signal-only agent with a liquidity-gated agent.
+- It uses Bitget meaningfully through Agent Hub, MCP, and Bitget APIs. Bitget’s MCP server exposes trading, market-data, account, and portfolio tools to AI agents. [bitget](https://www.bitget.com/activity-hub/agent-hub/mcp)
+- It emphasizes safety: the LLM never directly submits orders; the risk engine approves every action.
+
+## Files created
+
+- **`output/BUILD.md`** — full project explanation, thesis, target user, product value, strategy logic, validation plan, Bitget integration, demo script, roadmap, and disclaimer. 
+- **`output/requirements.txt`** — a complete Python dependency set for the API service, data pipeline, backtester, LLM/agent layer, database, security, testing, and Bitget integration. 
+
+## Recommended submission positioning
+
+Use this exact thesis in the form:
+
+> **We built NOCTURNE because 24/7 tokenized U.S.-stock trading creates a new execution-risk problem: price opportunities often appear when liquidity is weakest. Our hypothesis is that an agent can improve risk-adjusted outcomes by gating every trade through a Liquidity Weather Score based on spread, depth, volatility, lead-lag consistency, and event risk. Unlike sentiment-only agents, NOCTURNE separates AI reasoning from execution authority: the LLM explains market conditions, while deterministic risk rules decide whether the agent may trade, reduce size, wait, or stand down.**
+
+That is a strong, original angle because it turns the hackathon’s “agents never sleep” theme into a safer, more defensible idea: **agents should know when not to act.** [coindesk](https://www.coindesk.com/business/2026/10/11/imf-finds-demand-for-tokenized-stocks-says-the-market-is-still-volatile-illiquid)
