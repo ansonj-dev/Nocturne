@@ -37,7 +37,6 @@ llama-index==0.12.12
 # Bitget integration
 # Use the official Bitget SDK/API client if available for your language/runtime.
 # The MCP server can be connected separately through Bitget Agent Hub.
-bitget-api==1.0.0
 
 # Database and caching
 SQLAlchemy==2.0.36
