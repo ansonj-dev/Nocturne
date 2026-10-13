@@ -23,7 +23,6 @@ statsmodels==0.14.4
 scikit-learn==1.6.1
 
 # Technical indicators and backtesting
-pandas-ta==0.3.14b0
 vectorbt==0.27.2
 quantstats==0.0.62
 
