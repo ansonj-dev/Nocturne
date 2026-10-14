@@ -72,80 +72,127 @@ class BitgetClient:
     # ------------------------------------------------------------------
 
     async def get_ticker(self, symbol: str, product_type: str = "USDT-FUTURES") -> dict[str, Any]:
-        """Get current ticker: bid, ask, last, volume."""
-        path = f"/api/v2/mix/market/ticker?symbol={symbol}&productType={product_type}"
+        """Get ticker data, using Bitget SPOT v3 for Reality stock tokens."""
+        market_symbol, category = self._market_symbol(symbol, product_type)
+        if category == "SPOT":
+            path = "/api/v3/market/tickers?category=SPOT&symbol=" + market_symbol
+            resp = await self._client.get(path)
+            resp.raise_for_status()
+            payload = resp.json()
+            if payload.get("code") != "00000" or not payload.get("data"):
+                raise RuntimeError("Bitget spot ticker unavailable for " + market_symbol + ": " + str(payload.get("msg", payload.get("code"))))
+            row = payload["data"][0]
+            return {**row, "bidPr": row.get("bid1Price", "0"), "askPr": row.get("ask1Price", "0"), "lastPr": row.get("lastPrice", "0"), "symbol": market_symbol}
+        path = "/api/v2/mix/market/ticker?symbol=" + market_symbol + "&productType=" + product_type
         resp = await self._client.get(path)
         resp.raise_for_status()
         data = resp.json()
         if data.get("code") != "00000":
-            raise RuntimeError(f"Bitget error: {data}")
+            raise RuntimeError("Bitget error: " + str(data))
         return data["data"][0] if isinstance(data["data"], list) else data["data"]
 
-    async def get_orderbook(
-        self, symbol: str, limit: int = 20, product_type: str = "USDT-FUTURES"
-    ) -> dict[str, Any]:
-        """Get order book snapshot."""
-        path = (
-            f"/api/v2/mix/market/merge-depth"
-            f"?symbol={symbol}&productType={product_type}&limit={limit}"
-        )
+    async def get_orderbook(self, symbol: str, limit: int = 20, product_type: str = "USDT-FUTURES") -> dict[str, Any]:
+        """Get order-book depth, normalizing SPOT v3 fields for the weather engine."""
+        market_symbol, category = self._market_symbol(symbol, product_type)
+        if category == "SPOT":
+            path = "/api/v3/market/orderbook?category=SPOT&symbol=" + market_symbol + "&limit=" + str(limit)
+            resp = await self._client.get(path)
+            resp.raise_for_status()
+            payload = resp.json()
+            if payload.get("code") != "00000":
+                raise RuntimeError("Bitget spot order book unavailable for " + market_symbol + ": " + str(payload))
+            book = payload["data"]
+            return {"bids": book.get("b", []), "asks": book.get("a", []), "ts": book.get("ts")}
+        path = "/api/v2/mix/market/merge-depth?symbol=" + market_symbol + "&productType=" + product_type + "&limit=" + str(limit)
         resp = await self._client.get(path)
         resp.raise_for_status()
         data = resp.json()
         if data.get("code") != "00000":
-            raise RuntimeError(f"Bitget error: {data}")
+            raise RuntimeError("Bitget error: " + str(data))
         return data["data"]
 
-    async def get_klines(
-        self,
-        symbol: str,
-        granularity: str = "1H",
-        limit: int = 200,
-        product_type: str = "USDT-FUTURES",
-    ) -> list[list]:
-        """Get OHLCV candles. granularity: 1m, 5m, 15m, 1H, 4H, 1D."""
-        path = (
-            f"/api/v2/mix/market/candles"
-            f"?symbol={symbol}&productType={product_type}"
-            f"&granularity={granularity}&limit={limit}"
-        )
+    async def get_klines(self, symbol: str, granularity: str = "1H", limit: int = 200, product_type: str = "USDT-FUTURES") -> list[list]:
+        """Get OHLCV candles from SPOT v3 for stock tokens or futures v2 otherwise."""
+        market_symbol, category = self._market_symbol(symbol, product_type)
+        if category == "SPOT":
+            interval = granularity.upper() if granularity.lower() in ("1h", "4h", "1d") else granularity.lower()
+            path = "/api/v3/market/candles?category=SPOT&symbol=" + market_symbol + "&interval=" + interval + "&limit=" + str(min(max(int(limit), 1), 1000))
+            resp = await self._client.get(path)
+            resp.raise_for_status()
+            payload = resp.json()
+            if payload.get("code") != "00000":
+                raise RuntimeError("Bitget spot candles unavailable for " + market_symbol + ": " + str(payload))
+            return payload["data"]
+        path = "/api/v2/mix/market/candles?symbol=" + market_symbol + "&productType=" + product_type + "&granularity=" + granularity + "&limit=" + str(limit)
         resp = await self._client.get(path)
         resp.raise_for_status()
         data = resp.json()
         if data.get("code") != "00000":
-            raise RuntimeError(f"Bitget error: {data}")
-        # Returns list of [ts, open, high, low, close, baseVol, quoteVol]
+            raise RuntimeError("Bitget error: " + str(data))
         return data["data"]
+
+    @staticmethod
+    def _market_symbol(symbol: str, product_type: str) -> tuple[str, str]:
+        """Resolve bare US stock tickers to Reality rTokens; explicit rTokens use SPOT."""
+        clean = symbol.strip()
+        upper = clean.upper()
+        known_stocks = {"AAPL", "TSLA", "NVDA", "MSFT", "AMZN", "GOOGL", "GOOG", "META", "COIN", "PLTR", "HOOD", "MSTR", "NFLX", "AMD", "AVGO", "ORCL", "INTC", "BABA", "DIS", "JPM", "BAC", "COST", "WMT", "SPY", "QQQ"}
+        ticker = upper[:-4] if upper.endswith("USDT") else upper
+        if ticker.startswith("R") and ticker[1:] in known_stocks:
+            return "r" + ticker[1:] + ("USDT" if upper.endswith("USDT") else ""), "SPOT"
+        if ticker in known_stocks:
+            return "r" + ticker + "USDT", "SPOT"
+        return upper, product_type
 
     # ------------------------------------------------------------------
     # Private endpoints (auth required)
     # ------------------------------------------------------------------
 
     async def get_account_balance(self, product_type: str = "USDT-FUTURES") -> dict[str, Any]:
-        """Get account equity and available balance."""
-        path = f"/api/v2/mix/account/accounts?productType={product_type}"
+        """Get unified-account assets with a classic futures fallback."""
+        path = "/api/v3/account/assets"
         headers = self._headers("GET", path)
         resp = await self._client.get(path, headers=headers)
+        if resp.status_code < 400:
+            payload = resp.json()
+            if payload.get("code") == "00000":
+                return payload["data"]
+            logger.warning("[bitget] Unified account assets unavailable: " + str(payload.get("msg", payload.get("code"))))
+        legacy_path = "/api/v2/mix/account/accounts?productType=" + product_type
+        headers = self._headers("GET", legacy_path)
+        resp = await self._client.get(legacy_path, headers=headers)
         resp.raise_for_status()
-        data = resp.json()
-        if data.get("code") != "00000":
-            raise RuntimeError(f"Bitget error: {data}")
-        return data["data"]
+        payload = resp.json()
+        if payload.get("code") != "00000":
+            raise RuntimeError("Bitget account error: " + str(payload))
+        return payload["data"]
 
-    async def get_positions(
-        self, symbol: Optional[str] = None, product_type: str = "USDT-FUTURES"
-    ) -> list[dict[str, Any]]:
-        """Get open positions."""
-        path = f"/api/v2/mix/position/all-position?productType={product_type}"
+    async def get_positions(self, symbol: Optional[str] = None, product_type: str = "USDT-FUTURES") -> list[dict[str, Any]]:
+        """Return futures positions, or approximate spot exposure from UTA asset values."""
         if symbol:
-            path += f"&symbol={symbol}"
+            _, category = self._market_symbol(symbol, product_type)
+        else:
+            category = "FUTURES"
+        if category == "SPOT":
+            account = await self.get_account_balance(product_type)
+            assets = account.get("assets", []) if isinstance(account, dict) else []
+            rows = []
+            for asset in assets:
+                coin = str(asset.get("coin", "")).upper()
+                value = float(asset.get("usdValue", asset.get("equity", "0")) or 0)
+                if coin not in {"USDT", "USDC", "USD"} and value > 0:
+                    rows.append({"symbol": coin, "total": str(value), "markPrice": "1"})
+            return rows
+        path = "/api/v2/mix/position/all-position?productType=" + product_type
+        if symbol:
+            path += "&symbol=" + symbol
         headers = self._headers("GET", path)
         resp = await self._client.get(path, headers=headers)
         resp.raise_for_status()
-        data = resp.json()
-        if data.get("code") != "00000":
-            raise RuntimeError(f"Bitget error: {data}")
-        return data["data"]
+        payload = resp.json()
+        if payload.get("code") != "00000":
+            raise RuntimeError("Bitget positions error: " + str(payload))
+        return payload["data"]
 
     async def place_order(
         self,
