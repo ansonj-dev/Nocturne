@@ -194,7 +194,7 @@ async def evaluate_signal(req: SignalRequest):
             raise RuntimeError("Bitget account equity is missing or non-positive")
         equity = float(equity_value)
 
-        positions = await _client.get_positions()
+        positions = await _client.get_positions(symbol=symbol)
         existing_notional = 0.0
         for position in positions or []:
             try:
