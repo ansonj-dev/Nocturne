@@ -73,6 +73,17 @@ class RiskEngine:
 
         rejections: list[str] = []
 
+        # Fail closed on invalid risk context or stale/failed market data.
+        if not isinstance(account_equity, (int, float)) or account_equity <= 0:
+            rejections.append("Account equity is missing or non-positive")
+        if not getattr(weather, "data_quality_ok", True):
+            rejections.append("Market data quality check failed")
+
+        if signal.notional_usd <= 0:
+            rejections.append("Requested notional must be positive")
+        if not 0 <= signal.strength <= 1:
+            rejections.append("Signal strength must be between 0 and 1")
+
         # --- 1. Weather gate ---
         if weather.state in (WeatherState.STORM, WeatherState.BLACKOUT):
             rejections.append(
@@ -131,7 +142,7 @@ class RiskEngine:
         # --- 7. Daily-loss gate ---
         daily = self._daily_pnl.get(signal.symbol, 0.0)
         max_daily_loss = -account_equity * settings.max_daily_loss_pct
-        if daily < max_daily_loss:
+        if daily <= max_daily_loss:
             rejections.append(
                 f"Daily loss ${daily:.2f} exceeds limit ${max_daily_loss:.2f}"
             )
