@@ -107,10 +107,11 @@ async def health():
 
 
 @app.get("/weather/{symbol}", response_model=LiquidityWeatherReport, tags=["weather"])
-async def get_weather(symbol: str, explain: bool = True):
+async def get_weather(symbol: str, explain: bool = False):
     """
     Run a fresh Liquidity Weather check for *symbol*.
-    Set `explain=false` to skip the LLM rationale (faster).
+    Set `explain=true` to request an LLM rationale. By default, weather checks
+    do not call the LLM, which avoids usage-based AI charges during monitoring.
     """
     symbol = symbol.upper()
     try:

@@ -145,9 +145,14 @@
 
         <!-- Rationale panel -->
         <div class="rationale-panel glass-panel" id="rationale-panel">
-          <h3 class="panel-title">AI Rationale</h3>
-          <div class="rationale-text" id="rationale-text">
-            Run a weather check to see the AI explanation.
+          <div class="rationale-header">
+            <h3 class="panel-title">AI Rationale</h3>
+            <button class="btn-secondary rationale-btn" id="generate-rationale-btn" onclick="generateRationale()" title="Makes one AI request. Live weather monitoring does not call the model.">
+              ✦ Generate once
+            </button>
+          </div>
+          <div class="rationale-text" id="rationale-text" aria-live="polite">
+            AI is off. Live weather monitoring does not call the model. Generate one rationale only when needed.
           </div>
           <div class="rationale-ts" id="rationale-ts"></div>
         </div>

@@ -238,8 +238,19 @@ input:checked ~ .toggle-track .toggle-thumb { left: 18px; background: #fff; }
 .stat-value { font-family: var(--mono); font-size: 13px; }
 
 /* ── Rationale ── */
-.rationale-text { font-size: 14px; line-height: 1.7; color: var(--text); min-height: 80px; }
-.rationale-ts { font-size: 11px; color: var(--text-muted); margin-top: 12px; font-family: var(--mono); }
+.rationale-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.rationale-header .panel-title { margin-bottom: 14px; }
+.rationale-btn { flex: 0 0 auto; color: #c4b5fd; border-color: rgba(139,92,246,.35); }
+.rationale-btn:hover { color: #fff; background: rgba(139,92,246,.16); }
+.rationale-text { font-size: 13px; line-height: 1.7; color: #cbd5e1; min-height: 80px; overflow-wrap: anywhere; }
+.rationale-heading { color: #a5b4fc; font-size: 14px; line-height: 1.5; margin: 4px 0 9px; }
+.rationale-paragraph { margin: 0 0 10px; }
+.rationale-list { list-style: none; display: grid; gap: 8px; margin: 4px 0 12px; padding: 0; }
+.rationale-list li { position: relative; padding: 9px 11px 9px 28px; border: 1px solid rgba(99,102,241,.16); border-radius: 9px; background: rgba(99,102,241,.07); }
+.rationale-list li::before { content: '✦'; position: absolute; left: 11px; color: #818cf8; }
+.rationale-text strong { color: #67e8f9; font-weight: 700; }
+.rationale-text em { color: #c4b5fd; }
+.rationale-ts { font-size: 10px; color: var(--text-muted); margin-top: 12px; font-family: var(--mono); }
 
 /* ── Signal Lab ── */
 .signal-layout { display: grid; grid-template-columns: 480px 1fr; gap: 24px; align-items: start; }

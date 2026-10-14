@@ -64,19 +64,42 @@ function toggleLive() {
 // ─────────────────────────────────────────
 // Weather fetch
 // ─────────────────────────────────────────
-async function fetchWeather() {
+async function fetchWeather({ explain = false, preserveDisplay = false } = {}) {
   setConnStatus('connecting');
-  showLoading(true);
+  if (!preserveDisplay) showLoading(true);
   try {
-    const res = await fetch(`${API_BASE}/weather/${currentSymbol}?explain=true`);
+    const res = await fetch(`${API_BASE}/weather/${currentSymbol}?explain=${explain}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     renderWeather(data);
     pushTimeline(data);
     setConnStatus('connected');
+    return data;
   } catch (err) {
     setConnStatus('error');
-    showError(err.message);
+    if (preserveDisplay) {
+      document.getElementById('rationale-text').textContent = `Could not generate a rationale: ${err.message}`;
+    } else {
+      showError(err.message);
+    }
+    return null;
+  }
+}
+
+async function generateRationale() {
+  const btn = document.getElementById('generate-rationale-btn');
+  const text = document.getElementById('rationale-text');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+  text.textContent = 'Checking current conditions and asking the AI for an explanation…';
+  try {
+    const data = await fetchWeather({ explain: true, preserveDisplay: true });
+    if (data && !data.rationale) {
+      text.textContent = 'The AI returned no explanation. Try again in a moment.';
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✦ Generate once';
   }
 }
 
@@ -144,9 +167,81 @@ function renderWeather(d) {
   document.getElementById('stat-depth').textContent = d.depth_within_25bps != null ? `$${fmtNum(d.depth_within_25bps)}` : '—';
   document.getElementById('stat-size').textContent  = `${Math.round(d.recommended_size_pct * 100)}%`;
 
-  // Rationale
-  document.getElementById('rationale-text').textContent = d.rationale || '(No rationale — LLM not configured)';
-  document.getElementById('rationale-ts').textContent = `Last updated: ${new Date(d.timestamp).toUTCString()}`;
+  // AI only runs when the user presses Generate. Monitoring/refresh requests
+  // carry no rationale and should clearly leave AI inactive.
+  const rationaleText = document.getElementById('rationale-text');
+  if (d.rationale) {
+    renderRationale(d.rationale);
+    document.getElementById('rationale-ts').textContent = `Generated: ${new Date(d.timestamp).toUTCString()}`;
+  } else {
+    rationaleText.textContent = 'AI is off. Live weather monitoring does not call the model. Generate one rationale only when needed.';
+    document.getElementById('rationale-ts').textContent = '';
+  }
+}
+
+function renderRationale(markdown) {
+  const container = document.getElementById('rationale-text');
+  container.replaceChildren();
+  let list = null;
+
+  const flushList = () => {
+    if (list) container.appendChild(list);
+    list = null;
+  };
+
+  for (const rawLine of markdown.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line) {
+      flushList();
+      continue;
+    }
+
+    const heading = line.match(/^#{1,3}\s+(.+)$/) || line.match(/^\*\*(.+)\*\*$/);
+    if (heading) {
+      flushList();
+      const node = document.createElement('h4');
+      node.className = 'rationale-heading';
+      appendRationaleInline(node, heading[1]);
+      container.appendChild(node);
+      continue;
+    }
+
+    const bullet = line.match(/^[-*]\s+(.+)$/);
+    if (bullet) {
+      if (!list) {
+        list = document.createElement('ul');
+        list.className = 'rationale-list';
+      }
+      const item = document.createElement('li');
+      appendRationaleInline(item, bullet[1]);
+      list.appendChild(item);
+      continue;
+    }
+
+    flushList();
+    const paragraph = document.createElement('p');
+    paragraph.className = 'rationale-paragraph';
+    appendRationaleInline(paragraph, line);
+    container.appendChild(paragraph);
+  }
+  flushList();
+}
+
+function appendRationaleInline(parent, text) {
+  const tokens = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).filter(Boolean);
+  for (const token of tokens) {
+    if (token.startsWith('**') && token.endsWith('**')) {
+      const strong = document.createElement('strong');
+      strong.textContent = token.slice(2, -2);
+      parent.appendChild(strong);
+    } else if (token.startsWith('*') && token.endsWith('*')) {
+      const emphasis = document.createElement('em');
+      emphasis.textContent = token.slice(1, -1);
+      parent.appendChild(emphasis);
+    } else {
+      parent.appendChild(document.createTextNode(token));
+    }
+  }
 }
 
 function setBar(id, val, colour) {
