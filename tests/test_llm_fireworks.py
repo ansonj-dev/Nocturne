@@ -13,12 +13,12 @@ from src.models import (
 def test_fireworks_agent_initialization(monkeypatch):
     """Verify that setting FIREWORKS_API_KEY configures the agent for Fireworks AI."""
     monkeypatch.setattr(settings, "fireworks_api_key", "fw_test_key_12345")
-    monkeypatch.setattr(settings, "fireworks_model", "accounts/fireworks/models/qwen3p7-plus")
+    monkeypatch.setattr(settings, "fireworks_model", "accounts/fireworks/models/qwen3p8-max")
     monkeypatch.setattr(settings, "fireworks_base_url", "https://api.fireworks.ai/inference/v1")
 
     agent = LLMAgent()
     assert agent._provider == "fireworks"
-    assert agent._model == "accounts/fireworks/models/qwen3p7-plus"
+    assert agent._model == "accounts/fireworks/models/qwen3p8-max"
     assert agent._client is not None
     assert str(agent._client.base_url).startswith("https://api.fireworks.ai")
 

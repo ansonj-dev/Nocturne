@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str = Field(default="", description="Anthropic API key for Claude models")
     fireworks_api_key: str = Field(default="", description="Fireworks AI API key")
     fireworks_model: str = Field(
-        default="accounts/fireworks/models/qwen3p7-plus",
+        default="accounts/fireworks/models/qwen3p8-max",
         description="Fireworks model name; configure a serverless model or deployment ID",
     )
     fireworks_base_url: str = Field(
