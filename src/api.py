@@ -175,20 +175,47 @@ async def evaluate_signal(req: SignalRequest):
         raise HTTPException(status_code=502, detail=f"Weather engine error: {exc}")
     await log_weather(report)
 
-    # Account equity
+    # Fail closed: never approve a signal using invented account equity.
+    # The current API evaluates signals only; it does not submit orders.
     try:
         acc = await _client.get_account_balance()
-        equity = float(acc[0].get("usdtEquity", acc[0].get("equity", 1000)))
-    except Exception:
-        equity = 1000.0  # fallback for sandbox with no funds
-        logger.warning("[api] Could not fetch account balance, using fallback $1000")
+        if isinstance(acc, dict):
+            account_rows = [acc]
+        else:
+            account_rows = list(acc or [])
+        usdt_account = next(
+            (row for row in account_rows if str(row.get("marginCoin", "USDT")).upper() == "USDT"),
+            account_rows[0] if account_rows else None,
+        )
+        if not usdt_account:
+            raise RuntimeError("Bitget returned no USDT futures account")
+        equity_value = usdt_account.get("usdtEquity", usdt_account.get("equity"))
+        if equity_value is None or float(equity_value) <= 0:
+            raise RuntimeError("Bitget account equity is missing or non-positive")
+        equity = float(equity_value)
+
+        positions = await _client.get_positions()
+        existing_notional = 0.0
+        for position in positions or []:
+            try:
+                existing_notional += abs(float(
+                    position.get("total", position.get("size", position.get("available", 0))) or 0
+                ) * float(position.get("markPrice", position.get("averageOpenPrice", 0)) or 0))
+            except (TypeError, ValueError):
+                logger.warning("[api] Could not parse a position while calculating exposure")
+    except Exception as exc:
+        logger.warning(f"[api] Account/risk context unavailable; rejecting closed: {exc}")
+        raise HTTPException(
+            status_code=503,
+            detail="Risk evaluation unavailable: a valid Bitget account and positions are required.",
+        ) from exc
 
     # Risk decision (deterministic)
     decision = _risk_engine.evaluate(
         signal=signal,
         weather=report,
         account_equity=equity,
-        existing_notional=0.0,
+        existing_notional=existing_notional,
     )
     await log_decision(decision)
 
