@@ -73,10 +73,13 @@ class LLMAgent:
         """Generate a human-readable rationale for the weather report."""
         prompt = self._build_weather_prompt(report)
         try:
-            return await self._call_llm(prompt)
+            rationale = await self._call_llm(prompt)
+            if rationale:
+                return rationale
+            logger.warning("[llm] Fireworks returned an empty rationale, using template")
         except Exception as exc:
             logger.warning(f"[llm] LLM call failed, using template: {exc}")
-            return self._template_rationale(report)
+        return self._template_rationale(report)
 
     async def explain_rejection(
         self, signal: OpportunitySignal, decision: RiskDecision
@@ -134,14 +137,15 @@ class LLMAgent:
             default_m = "accounts/fireworks/models/qwen3p8-max" if self._provider == "fireworks" else "gpt-4o-mini"
             msg = await self._client.chat.completions.create(
                 model=self._model or default_m,
-                max_tokens=200,
+                max_tokens=4000 if self._provider == "fireworks" else 200,
                 messages=[
                     {"role": "system", "content": _SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.3,
+                **({"extra_body": {"reasoning_effort": "none"}} if self._provider == "fireworks" else {}),
             )
-            return msg.choices[0].message.content.strip()
+            return (msg.choices[0].message.content or "").strip()
 
     @staticmethod
     def _template_rationale(report: LiquidityWeatherReport) -> str:
