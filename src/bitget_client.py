@@ -172,17 +172,18 @@ class BitgetClient:
         if symbol:
             _, category = self._market_symbol(symbol, product_type)
         else:
-            category = "FUTURES"
-        if category == "SPOT":
+            category = "UTA"
+        if category in {"SPOT", "UTA"}:
             account = await self.get_account_balance(product_type)
             assets = account.get("assets", []) if isinstance(account, dict) else []
-            rows = []
-            for asset in assets:
-                coin = str(asset.get("coin", "")).upper()
-                value = float(asset.get("usdValue", asset.get("equity", "0")) or 0)
-                if coin not in {"USDT", "USDC", "USD"} and value > 0:
-                    rows.append({"symbol": coin, "total": str(value), "markPrice": "1"})
-            return rows
+            if isinstance(assets, list):
+                rows = []
+                for asset in assets:
+                    coin = str(asset.get("coin", "")).upper()
+                    value = float(asset.get("usdValue", asset.get("equity", "0")) or 0)
+                    if coin not in {"USDT", "USDC", "USD"} and value > 0:
+                        rows.append({"symbol": coin, "total": str(value), "markPrice": "1"})
+                return rows
         path = "/api/v2/mix/position/all-position?productType=" + product_type
         if symbol:
             path += "&symbol=" + symbol
