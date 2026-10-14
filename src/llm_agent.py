@@ -40,6 +40,10 @@ class LLMAgent:
             self._model = settings.llm_model
 
         self._client = self._build_client()
+        logger.info(
+            f"[llm] configured provider={self._provider} model={self._model} "
+            f"client_ready={self._client is not None}"
+        )
 
     def _build_client(self):
         if self._provider == "fireworks":
