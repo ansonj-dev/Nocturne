@@ -5,7 +5,7 @@
    and account data.
 ══════════════════════════════════════════ */
 
-const API_BASE = window.location.protocol === 'file:' ? 'https://nocturne-1m7s.onrender.com' : window.location.origin;
+const API_BASE = 'https://nocturne-1m7s.onrender.com';
 let currentSymbol = 'AAPLUSDT';
 let liveInterval = null;
 let aiRationaleEnabled = false;
