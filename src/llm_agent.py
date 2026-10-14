@@ -127,7 +127,7 @@ class LLMAgent:
             )
             return msg.content[0].text.strip()
         else:
-            default_m = "accounts/fireworks/models/qwen2p5-72b-instruct" if self._provider == "fireworks" else "gpt-4o-mini"
+            default_m = "accounts/fireworks/models/qwen3p7-plus" if self._provider == "fireworks" else "gpt-4o-mini"
             msg = await self._client.chat.completions.create(
                 model=self._model or default_m,
                 max_tokens=200,
