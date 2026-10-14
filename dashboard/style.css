@@ -120,6 +120,7 @@ main { max-width: 1400px; margin: 0 auto; padding: 28px 24px; }
   outline: none; transition: var(--trans);
 }
 .symbol-custom input:focus { border-color: var(--accent); }
+.symbol-custom input[list] { width: 230px; }
 
 /* ── Buttons ── */
 .btn-primary {
@@ -240,8 +241,7 @@ input:checked ~ .toggle-track .toggle-thumb { left: 18px; background: #fff; }
 /* ── Rationale ── */
 .rationale-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .rationale-header .panel-title { margin-bottom: 14px; }
-.rationale-btn { flex: 0 0 auto; color: #c4b5fd; border-color: rgba(139,92,246,.35); }
-.rationale-btn:hover { color: #fff; background: rgba(139,92,246,.16); }
+.ai-toggle-label { flex: 0 0 auto; color: #c4b5fd; }
 .rationale-text { font-size: 13px; line-height: 1.7; color: #cbd5e1; min-height: 80px; overflow-wrap: anywhere; }
 .rationale-heading { color: #a5b4fc; font-size: 14px; line-height: 1.5; margin: 4px 0 9px; }
 .rationale-paragraph { margin: 0 0 10px; }
@@ -254,6 +254,10 @@ input:checked ~ .toggle-track .toggle-thumb { left: 18px; background: #fff; }
 
 /* ── Signal Lab ── */
 .signal-layout { display: grid; grid-template-columns: 480px 1fr; gap: 24px; align-items: start; }
+.trade-panel { margin-top: 24px; }
+.trade-panel .form-hint { margin: 0 0 18px; line-height: 1.6; }
+.trade-grid { max-width: 900px; }
+#trade-result { margin-top: 12px; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-group.full-width { grid-column: 1 / -1; }
@@ -302,6 +306,10 @@ input:checked ~ .toggle-track .toggle-thumb { left: 18px; background: #fff; }
 
 /* ── Account ── */
 .account-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.private-token-panel { margin-bottom: 24px; }
+.private-token-panel .panel-title { display: block; margin-bottom: 8px; }
+.private-token-panel .form-hint { margin-bottom: 10px; line-height: 1.5; }
+.private-token-panel input { width: min(100%, 460px); background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--text); border-radius: var(--radius-sm); padding: 9px 12px; }
 .balance-loading, .balance-content { }
 .account-stat { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .account-stat:last-child { border-bottom: none; }

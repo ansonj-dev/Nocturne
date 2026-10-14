@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     bitget_api_secret: str = Field(default="", description="Bitget REST API secret")
     bitget_api_passphrase: str = Field(default="", description="Bitget API passphrase")
     bitget_use_sandbox: bool = Field(default=True, description="Use Bitget sandbox/demo environment")
+    live_trading_enabled: bool = Field(default=False, description="Allow explicitly authenticated Reality spot orders")
+    trading_api_token: str = Field(default="", description="Private dashboard token required for live orders")
 
     # --- LLM ---
     openai_api_key: str = Field(default="", description="OpenAI API key for GPT models")

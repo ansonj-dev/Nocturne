@@ -91,6 +91,19 @@ class BitgetClient:
             raise RuntimeError("Bitget error: " + str(data))
         return data["data"][0] if isinstance(data["data"], list) else data["data"]
 
+    async def list_reality_symbols(self) -> list[dict[str, str]]:
+        """List Bitget Reality stock instruments (public endpoint)."""
+        resp = await self._client.get("/api/v3/reality/market/stock-info")
+        resp.raise_for_status()
+        payload = resp.json()
+        if payload.get("code") != "00000":
+            raise RuntimeError("Bitget Reality instruments unavailable: " + str(payload.get("msg", payload.get("code"))))
+        return [
+            {"symbol": str(row.get("symbol", "")), "ticker": str(row.get("code", "")), "name": str(row.get("name", ""))}
+            for row in payload.get("data", [])
+            if row.get("symbol") and row.get("code")
+        ]
+
     async def get_orderbook(self, symbol: str, limit: int = 20, product_type: str = "USDT-FUTURES") -> dict[str, Any]:
         """Get order-book depth, normalizing SPOT v3 fields for the weather engine."""
         market_symbol, category = self._market_symbol(symbol, product_type)
@@ -138,7 +151,7 @@ class BitgetClient:
         upper = clean.upper()
         known_stocks = {"AAPL", "TSLA", "NVDA", "MSFT", "AMZN", "GOOGL", "GOOG", "META", "COIN", "PLTR", "HOOD", "MSTR", "NFLX", "AMD", "AVGO", "ORCL", "INTC", "BABA", "DIS", "JPM", "BAC", "COST", "WMT", "SPY", "QQQ"}
         ticker = upper[:-4] if upper.endswith("USDT") else upper
-        if ticker.startswith("R") and ticker[1:] in known_stocks:
+        if upper.startswith("R") and upper.endswith("USDT") and len(ticker) > 1:
             return "r" + ticker[1:] + ("USDT" if upper.endswith("USDT") else ""), "SPOT"
         if ticker in known_stocks:
             return "r" + ticker + "USDT", "SPOT"
@@ -231,6 +244,29 @@ class BitgetClient:
         if data.get("code") != "00000":
             raise RuntimeError(f"Bitget order error: {data}")
         return data["data"]
+
+    async def place_reality_order(
+        self, symbol: str, side: str, qty: str, order_type: str = "market",
+        price: Optional[str] = None, client_oid: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Place a Reality SPOT order using Bitget's unified-account API."""
+        from urllib.parse import urlencode
+        params: dict[str, Any] = {
+            "symbol": symbol, "side": side, "orderType": order_type,
+            "qty": qty, "category": "SPOT", "venue": "lit_market",
+        }
+        if price is not None:
+            params["price"] = price
+        if client_oid:
+            params["clientOid"] = client_oid
+        path = "/api/v3/trade/place-reality-order"
+        signed_path = f"{path}?{urlencode(params)}"
+        resp = await self._client.post(path, params=params, headers=self._headers("POST", signed_path))
+        resp.raise_for_status()
+        payload = resp.json()
+        if payload.get("code") != "00000":
+            raise RuntimeError("Bitget Reality order error: " + str(payload))
+        return payload["data"]
 
     async def cancel_order(
         self,

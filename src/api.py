@@ -13,13 +13,16 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
+import re
+import time
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .audit_log import (
     get_recent_weather,
@@ -63,6 +66,8 @@ _client: Optional[BitgetClient] = None
 _weather_engine: Optional[LiquidityWeatherEngine] = None
 _risk_engine: Optional[RiskEngine] = None
 _llm_agent: Optional[LLMAgent] = None
+_symbols_cache: list[dict[str, str]] = []
+_symbols_cached_at = 0.0
 
 
 @app.on_event("startup")
@@ -106,6 +111,22 @@ async def health():
     return {"status": "ok", "version": settings.app_version}
 
 
+@app.get("/symbols", tags=["market"])
+async def list_symbols():
+    """Return the exchange's current Reality stock instruments."""
+    global _symbols_cache, _symbols_cached_at
+    if _symbols_cache and time.monotonic() - _symbols_cached_at < 300:
+        return _symbols_cache
+    try:
+        _symbols_cache = await _client.list_reality_symbols()
+        _symbols_cached_at = time.monotonic()
+        return _symbols_cache
+    except Exception as exc:
+        if _symbols_cache:
+            return _symbols_cache
+        raise HTTPException(status_code=502, detail=f"Could not load Reality symbols: {exc}") from exc
+
+
 @app.get("/weather/{symbol}", response_model=LiquidityWeatherReport, tags=["weather"])
 async def get_weather(symbol: str, explain: bool = False):
     """
@@ -142,10 +163,11 @@ class SignalRequest(BaseModel):
     stop_price: Optional[float] = None
     target_price: Optional[float] = None
     notes: str = ""
+    explain: bool = False
 
 
 @app.post("/signal", tags=["trading"])
-async def evaluate_signal(req: SignalRequest):
+async def evaluate_signal(req: SignalRequest, x_trading_token: str = Header(default="")):
     """
     Submit an opportunity signal.  The system will:
       1. Run a fresh weather check.
@@ -153,6 +175,8 @@ async def evaluate_signal(req: SignalRequest):
       3. Run the deterministic risk engine.
       4. Return the RiskDecision (never places an order automatically).
     """
+    if not settings.trading_api_token or not hmac.compare_digest(x_trading_token, settings.trading_api_token):
+        raise HTTPException(status_code=401, detail="A valid private dashboard token is required for account-backed risk evaluation.")
     symbol = req.symbol.upper()
 
     # Build signal
@@ -222,7 +246,7 @@ async def evaluate_signal(req: SignalRequest):
 
     # LLM rationale
     rationale = ""
-    if _llm_agent:
+    if req.explain and _llm_agent:
         if decision.approved:
             rationale = await _llm_agent.explain_weather(report)
         else:
@@ -247,14 +271,53 @@ async def list_trades_for_symbol(symbol: str, limit: int = 50):
 
 
 @app.get("/account", tags=["account"])
-async def get_account():
+async def get_account(x_trading_token: str = Header(default="")):
     """Return live account balance and open positions."""
+    if not settings.trading_api_token or not hmac.compare_digest(x_trading_token, settings.trading_api_token):
+        raise HTTPException(status_code=401, detail="A valid private dashboard token is required to view account data.")
     try:
         balance = await _client.get_account_balance()
         positions = await _client.get_positions()
         return {"balance": balance, "positions": positions}
     except Exception as exc:
         raise HTTPException(status_code=502, detail=str(exc))
+
+
+class RealityOrderRequest(BaseModel):
+    symbol: str
+    side: str
+    qty: float = Field(gt=0, le=1000000)
+    order_type: str = "market"
+
+
+@app.get("/trading/status", tags=["trading"])
+async def trading_status():
+    """Describe availability without revealing credentials or tokens."""
+    enabled = settings.live_trading_enabled and bool(settings.trading_api_token)
+    return {"live_trading_enabled": enabled, "mode": "live" if enabled else "disabled"}
+
+
+@app.post("/trading/reality-order", tags=["trading"])
+async def place_reality_order(req: RealityOrderRequest, x_trading_token: str = Header(default="")):
+    """Manually submit one Reality spot order; disabled unless a self-host admin opts in."""
+    if not settings.live_trading_enabled or not settings.trading_api_token:
+        raise HTTPException(status_code=503, detail="Live trading is disabled by the server administrator.")
+    if not hmac.compare_digest(x_trading_token, settings.trading_api_token):
+        raise HTTPException(status_code=401, detail="A valid trading access token is required.")
+    symbol = req.symbol.strip()
+    if not re.fullmatch(r"r[A-Za-z0-9]{1,15}USDT", symbol):
+        raise HTTPException(status_code=422, detail="Use a Reality stock symbol such as rAAPLUSDT.")
+    side = req.side.lower()
+    if side not in {"buy", "sell"}:
+        raise HTTPException(status_code=422, detail="side must be buy or sell.")
+    order_type = req.order_type.lower()
+    if order_type != "market":
+        raise HTTPException(status_code=422, detail="Only market orders are currently supported.")
+    try:
+        return await _client.place_reality_order(symbol, side, str(req.qty), order_type)
+    except Exception as exc:
+        logger.exception("[api] Reality order submission failed")
+        raise HTTPException(status_code=502, detail=f"Bitget rejected or could not confirm the order: {exc}") from exc
 
 
 # ---------------------------------------------------------------------------

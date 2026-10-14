@@ -42,7 +42,8 @@
           <button class="pill" data-symbol="AMZNUSDT" onclick="setSymbol('AMZNUSDT')">AMZN</button>
         </div>
         <div class="symbol-custom">
-          <input id="custom-symbol" placeholder="Custom symbol…" />
+          <input id="custom-symbol" list="symbol-catalog" placeholder="Search stock (e.g. NVDA)" />
+          <datalist id="symbol-catalog"></datalist>
           <button class="btn-secondary" onclick="setCustomSymbol()">Go</button>
         </div>
         <button class="btn-primary" id="refresh-btn" onclick="fetchWeather()">↻ Refresh</button>
@@ -147,12 +148,14 @@
         <div class="rationale-panel glass-panel" id="rationale-panel">
           <div class="rationale-header">
             <h3 class="panel-title">AI Rationale</h3>
-            <button class="btn-secondary rationale-btn" id="generate-rationale-btn" onclick="generateRationale()" title="Makes one AI request. Live weather monitoring does not call the model.">
-              ✦ Generate once
-            </button>
+            <label class="toggle-label ai-toggle-label" title="When on, the model is called once per weather refresh. Leave off to avoid AI usage.">
+              <input type="checkbox" id="ai-toggle" onchange="toggleAI()" />
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              AI on
+            </label>
           </div>
           <div class="rationale-text" id="rationale-text" aria-live="polite">
-            AI is off. Live weather monitoring does not call the model. Generate one rationale only when needed.
+            AI is off. Turn it on to request a rationale with each weather refresh.
           </div>
           <div class="rationale-ts" id="rationale-ts"></div>
         </div>
@@ -230,6 +233,17 @@
           <div class="decision-rationale" id="decision-rationale"></div>
         </div>
       </div>
+      <div class="trade-panel glass-panel">
+        <h2 class="panel-title">Manual Reality Spot Order</h2>
+        <p class="form-hint">For self-hosted installations only. Live orders require the operator to enable trading and configure a private access token in the Account tab. Market-buy quantity is USDT; market-sell quantity is shares.</p>
+        <div class="form-grid trade-grid">
+          <div class="form-group"><label>Reality symbol</label><input id="trade-symbol" value="rAAPLUSDT" /></div>
+          <div class="form-group"><label>Side</label><select id="trade-side"><option value="buy">Buy</option><option value="sell">Sell</option></select></div>
+          <div class="form-group"><label>Quantity</label><input id="trade-qty" type="number" min="0.000001" step="any" placeholder="e.g. 25 USDT" /></div>
+        </div>
+        <button class="btn-primary" onclick="submitRealityOrder()">Review and place market order</button>
+        <div id="trade-result" class="form-hint" aria-live="polite"></div>
+      </div>
     </section>
 
     <!-- ══════════════════════ HISTORY TAB ══════════════════════ -->
@@ -263,6 +277,11 @@
 
     <!-- ══════════════════════ ACCOUNT TAB ══════════════════════ -->
     <section class="tab" id="tab-account">
+      <div class="glass-panel private-token-panel">
+        <label for="trade-token" class="panel-title">Private dashboard token</label>
+        <p class="form-hint">Required for private account data, risk evaluation, and (when enabled by your server operator) order placement. Stored only for this browser tab.</p>
+        <input id="trade-token" type="password" autocomplete="off" placeholder="Enter your server's TRADING_API_TOKEN" oninput="sessionStorage.setItem('nocturne-trading-token', this.value)" />
+      </div>
       <div class="account-grid">
         <div class="account-card glass-panel" id="account-balance-card">
           <h2 class="panel-title">Account Balance</h2>

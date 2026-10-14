@@ -21,6 +21,12 @@ Most autonomous trading bots blindly execute whenever a signal appears, sufferin
 
 **NOCTURNE** challenges this assumption. Instead of a sentiment bot that gambles on after-hours headlines, NOCTURNE is an **execution-risk and liquidity-regime gatekeeper**. It evaluates whether the market environment is structurally safe to trade before any order is submitted.
 
+## Current dashboard and live trading setup
+
+The dashboard's stock search loads the current Bitget Reality instrument catalog through `GET /symbols`. AI rationale starts **off**; enabling the AI switch requests one explanation per weather refresh, including each 30-second refresh when Live monitoring is enabled. Ordinary weather checks do not call the language model.
+
+Reality spot orders are manual and disabled by default. The dashboard/backend use `LIVE_TRADING_ENABLED=true`, a strong private `TRADING_API_TOKEN`, and the operator's own Bitget UTA API credentials to enable order submission. Keep those settings on a private, self-hosted installation only. The shared Render deployment remains market-data only; do not put a personal exchange key on a public service. `POST /trading/reality-order` accepts market buy/sell requests and requires the `X-Trading-Token` header. Market-buy quantity is quote USDT; market-sell quantity is base shares. Orders are real when enabled; the endpoint does not paper trade.
+
 ---
 
 ## 🏛️ System Architecture

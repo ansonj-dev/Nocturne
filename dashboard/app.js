@@ -5,9 +5,10 @@
    and account data.
 ══════════════════════════════════════════ */
 
-const API_BASE = 'https://nocturne-1m7s.onrender.com';
+const API_BASE = window.location.protocol === 'file:' ? 'https://nocturne-1m7s.onrender.com' : window.location.origin;
 let currentSymbol = 'AAPLUSDT';
 let liveInterval = null;
+let aiRationaleEnabled = false;
 let timelineChart = null;
 let timelineData = { labels: [], scores: [] };
 
@@ -19,6 +20,7 @@ const STATE_COLOURS = {
   BLACKOUT: '#ef4444',
 };
 const CIRCUMFERENCE = 2 * Math.PI * 50; // r=50
+function getTradingToken() { return document.getElementById('trade-token').value.trim(); }
 
 // ─────────────────────────────────────────
 // Tab navigation
@@ -34,7 +36,8 @@ function showTab(name) {
 // Symbol selection
 // ─────────────────────────────────────────
 function setSymbol(sym) {
-  currentSymbol = sym;
+  const normalized = String(sym).toUpperCase();
+  currentSymbol = normalized.endsWith('USDT') ? normalized : `${normalized}USDT`;
   document.querySelectorAll('.pill').forEach(p => {
     const label = (p.dataset.symbol || p.textContent || '').trim().toUpperCase();
     p.classList.toggle('active', label === sym.toUpperCase());
@@ -43,7 +46,26 @@ function setSymbol(sym) {
 }
 function setCustomSymbol() {
   const v = document.getElementById('custom-symbol').value.trim().toUpperCase();
-  if (v) { currentSymbol = v; fetchWeather(); }
+  if (v) { setSymbol(v); }
+}
+
+async function loadSymbolCatalog() {
+  try {
+    const res = await fetch(`${API_BASE}/symbols`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const symbols = await res.json();
+    const datalist = document.getElementById('symbol-catalog');
+    datalist.replaceChildren();
+    for (const item of symbols) {
+      const option = document.createElement('option');
+      option.value = item.symbol;
+      option.label = item.name;
+      datalist.appendChild(option);
+    }
+    document.getElementById('custom-symbol').placeholder = `Search ${symbols.length} Reality stocks…`;
+  } catch (err) {
+    document.getElementById('custom-symbol').placeholder = 'Search stock (catalog unavailable)';
+  }
 }
 
 // ─────────────────────────────────────────
@@ -64,7 +86,7 @@ function toggleLive() {
 // ─────────────────────────────────────────
 // Weather fetch
 // ─────────────────────────────────────────
-async function fetchWeather({ explain = false, preserveDisplay = false } = {}) {
+async function fetchWeather({ explain = aiRationaleEnabled, preserveDisplay = false } = {}) {
   setConnStatus('connecting');
   if (!preserveDisplay) showLoading(true);
   try {
@@ -86,20 +108,15 @@ async function fetchWeather({ explain = false, preserveDisplay = false } = {}) {
   }
 }
 
-async function generateRationale() {
-  const btn = document.getElementById('generate-rationale-btn');
+async function toggleAI() {
+  aiRationaleEnabled = document.getElementById('ai-toggle').checked;
   const text = document.getElementById('rationale-text');
-  btn.disabled = true;
-  btn.textContent = 'Generating…';
-  text.textContent = 'Checking current conditions and asking the AI for an explanation…';
-  try {
-    const data = await fetchWeather({ explain: true, preserveDisplay: true });
-    if (data && !data.rationale) {
-      text.textContent = 'The AI returned no explanation. Try again in a moment.';
-    }
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '✦ Generate once';
+  if (aiRationaleEnabled) {
+    text.textContent = 'AI is on. A rationale will be generated with each weather refresh.';
+    await fetchWeather({ explain: true, preserveDisplay: true });
+  } else {
+    text.textContent = 'AI is off. Weather refreshes will not call the model.';
+    document.getElementById('rationale-ts').textContent = '';
   }
 }
 
@@ -167,15 +184,41 @@ function renderWeather(d) {
   document.getElementById('stat-depth').textContent = d.depth_within_25bps != null ? `$${fmtNum(d.depth_within_25bps)}` : '—';
   document.getElementById('stat-size').textContent  = `${Math.round(d.recommended_size_pct * 100)}%`;
 
-  // AI only runs when the user presses Generate. Monitoring/refresh requests
-  // carry no rationale and should clearly leave AI inactive.
+  // AI is opt-in and follows the user-controlled toggle.
   const rationaleText = document.getElementById('rationale-text');
   if (d.rationale) {
     renderRationale(d.rationale);
     document.getElementById('rationale-ts').textContent = `Generated: ${new Date(d.timestamp).toUTCString()}`;
   } else {
-    rationaleText.textContent = 'AI is off. Live weather monitoring does not call the model. Generate one rationale only when needed.';
+    rationaleText.textContent = aiRationaleEnabled ? 'Waiting for an AI rationale…' : 'AI is off. Weather refreshes will not call the model.';
     document.getElementById('rationale-ts').textContent = '';
+  }
+}
+
+async function submitRealityOrder() {
+  const result = document.getElementById('trade-result');
+  const symbolInput = document.getElementById('trade-symbol').value.trim().toUpperCase();
+  const symbol = symbolInput.startsWith('R') ? symbolInput.replace(/^R/, 'r') : `r${symbolInput}`;
+  const qty = Number(document.getElementById('trade-qty').value);
+  const token = getTradingToken();
+  const side = document.getElementById('trade-side').value;
+  if (!token || !Number.isFinite(qty) || qty <= 0) {
+    result.textContent = 'Enter the self-hosted trading token and a quantity greater than zero.';
+    return;
+  }
+  const unit = side === 'buy' ? 'USDT' : 'shares';
+  if (!window.confirm(`Submit a LIVE ${side.toUpperCase()} market order for ${symbol}, quantity ${qty} ${unit}?`)) return;
+  result.textContent = 'Submitting order…';
+  try {
+    const res = await fetch(`${API_BASE}/trading/reality-order`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Trading-Token': token },
+      body: JSON.stringify({ symbol, side, qty, order_type: 'market' }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    result.textContent = `Order accepted. Bitget order ID: ${data.orderId || 'unknown'}`;
+  } catch (err) {
+    result.textContent = `Order failed: ${err.message}`;
   }
 }
 
@@ -315,6 +358,7 @@ async function submitSignal() {
     strength:    parseFloat(document.getElementById('sig-strength').value),
     notional_usd:parseFloat(document.getElementById('sig-notional').value),
     notes:       document.getElementById('sig-notes').value,
+    explain:     aiRationaleEnabled,
   };
   const ep = document.getElementById('sig-entry').value;
   const sp = document.getElementById('sig-stop').value;
@@ -325,10 +369,10 @@ async function submitSignal() {
 
   try {
     const res = await fetch(`${API_BASE}/signal`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Trading-Token': getTradingToken() },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || `HTTP ${res.status}`); }
     const data = await res.json();
     renderDecision(data);
   } catch (err) {
@@ -406,8 +450,8 @@ function renderHistory(rows) {
 // ─────────────────────────────────────────
 async function fetchAccount() {
   try {
-    const res = await fetch(`${API_BASE}/account`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch(`${API_BASE}/account`, { headers: { 'X-Trading-Token': getTradingToken() } });
+    if (!res.ok) { const err = await res.json(); throw new Error(err.detail || `HTTP ${res.status}`); }
     const data = await res.json();
     renderAccount(data);
   } catch (err) {
@@ -488,10 +532,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize the score ring
   const fill = document.getElementById('ring-fill');
   fill.style.strokeDasharray = `0 ${CIRCUMFERENCE}`;
+  loadSymbolCatalog();
+  document.getElementById('trade-token').value = sessionStorage.getItem('nocturne-trading-token') || '';
+  fetchWeather();
 
   // Check API health
   fetch(`${API_BASE}/health`)
     .then(r => r.json())
     .then(() => setConnStatus('connected'))
     .catch(() => setConnStatus('error'));
+  fetch(`${API_BASE}/trading/status`).then(r => r.json()).then(status => {
+    const button = document.querySelector('.trade-panel .btn-primary');
+    const message = document.getElementById('trade-result');
+    if (!status.live_trading_enabled) {
+      button.disabled = true;
+      button.textContent = 'Live trading disabled by server';
+      message.textContent = 'This deployment is market-data only. Self-host with LIVE_TRADING_ENABLED=true and a private TRADING_API_TOKEN to enable orders.';
+    }
+  }).catch(() => {});
 });
