@@ -321,19 +321,33 @@ async function fetchAccount() {
 }
 
 function renderAccount(data) {
-  const bal = Array.isArray(data.balance) ? data.balance[0] : data.balance;
+  const balance = data.balance;
+  const rows = Array.isArray(balance)
+    ? balance
+    : (Array.isArray(balance?.assets) ? balance.assets : []);
+  const bal = rows.find(row => String(row.marginCoin || row.coin || '').toUpperCase() === 'USDT')
+    || rows[0]
+    || balance
+    || {};
   const balDiv = document.getElementById('balance-content');
   balDiv.classList.remove('hidden');
   document.querySelector('.balance-loading')?.remove();
 
+  const firstValue = (...values) => values.find(value => value !== undefined && value !== null && value !== '');
+  const displayValue = value => {
+    const numeric = Number(value);
+    return value !== undefined && value !== null && value !== '' && Number.isFinite(numeric)
+      ? numeric.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+      : '—';
+  };
   const fields = [
-    ['USDT Equity', bal.usdtEquity ?? bal.equity ?? '—'],
-    ['Available',   bal.available ?? '—'],
-    ['Unrealized PnL', bal.unrealizedPL ?? '—'],
-    ['Margin Ratio', bal.marginRatio ?? '—'],
+    ['USDT Equity', firstValue(bal.usdtEquity, bal.accountEquity, bal.equity, bal.equityValue)],
+    ['Available', firstValue(bal.available, bal.availableBalance, bal.availableEquity, bal.maxTransferOut)],
+    ['Unrealized PnL', firstValue(bal.unrealizedPL, bal.unrealizedPnl, bal.uPnL, bal.unrealizedProfit)],
+    ['Margin Ratio', firstValue(bal.marginRatio, bal.crossedRiskRate, bal.riskRate)],
   ];
   balDiv.innerHTML = fields.map(([k, v]) =>
-    `<div class="account-stat"><span class="stat-label">${k}</span><span class="stat-value" style="font-family:var(--mono)">${v}</span></div>`
+    `<div class="account-stat"><span class="stat-label">${k}</span><span class="stat-value" style="font-family:var(--mono)">${displayValue(v)}</span></div>`
   ).join('');
 
   const posDiv = document.getElementById('positions-content');
@@ -341,12 +355,16 @@ function renderAccount(data) {
   if (!positions.length) {
     posDiv.innerHTML = '<p class="empty-state">No open positions.</p>';
   } else {
-    posDiv.innerHTML = positions.map(p =>
-      `<div class="account-stat">
-        <span>${p.symbol} <span style="color:${p.holdSide==='long'?'#4ade80':'#ef4444'}">${p.holdSide}</span></span>
-        <span style="font-family:var(--mono)">$${parseFloat(p.total || 0).toFixed(2)}</span>
-      </div>`
-    ).join('');
+    posDiv.innerHTML = positions.map(p => {
+      const side = p.holdSide || p.posSide || p.side || 'spot';
+      const directionColour = side.toLowerCase() === 'long' || side.toLowerCase() === 'buy' ? '#4ade80' : '#ef4444';
+      const amount = firstValue(p.total, p.size, p.available, p.usdValue, 0);
+      const symbol = String(p.symbol || p.coin || 'Asset');
+      return `<div class="account-stat">
+        <span>${symbol} <span style="color:${directionColour}">${side}</span></span>
+        <span style="font-family:var(--mono)">$${displayValue(amount)}</span>
+      </div>`;
+    }).join('');
   }
 }
 
