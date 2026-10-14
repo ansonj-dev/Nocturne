@@ -35,8 +35,10 @@ function showTab(name) {
 // ─────────────────────────────────────────
 function setSymbol(sym) {
   currentSymbol = sym;
-  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-  event.target.classList.add('active');
+  document.querySelectorAll('.pill').forEach(p => {
+    const label = (p.dataset.symbol || p.textContent || '').trim().toUpperCase();
+    p.classList.toggle('active', label === sym.toUpperCase());
+  });
   fetchWeather();
 }
 function setCustomSymbol() {
@@ -49,12 +51,13 @@ function setCustomSymbol() {
 // ─────────────────────────────────────────
 function toggleLive() {
   const on = document.getElementById('live-toggle').checked;
+  if (liveInterval) {
+    clearInterval(liveInterval);
+    liveInterval = null;
+  }
   if (on) {
     fetchWeather();
     liveInterval = setInterval(fetchWeather, 30000);
-  } else {
-    clearInterval(liveInterval);
-    liveInterval = null;
   }
 }
 
